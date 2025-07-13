@@ -1,11 +1,25 @@
+if (process.env.NODE_ENV != "prodution") {
+  require("dotenv").config();
+}
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
 const ejs = require("ejs");
-const Listing = require("./models/listing.js");
 const path = require("path");
 const methodOverride = require("method-override");
 const ejsMate = require("ejs-mate");
+const ExpressError = require("./utils/ExpressError.js");
+const session = require("express-session");
+const MongoStore = require("connect-mongo");
+const flash = require("connect-flash");
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
+const User = require("./models/user.js");
+
+const listingsRouter = require("./routes/listing.js");
+const reviewsRouter = require("./routes/review.js");
+const userRouter = require("./routes/user.js");
 
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
@@ -15,8 +29,43 @@ app.use(methodOverride("_method"));
 
 app.set("views", path.join(__dirname, "views"));
 app.engine("ejs", ejsMate);
+const dbUrl = process.env.ATLASDB_URL;
 
-const MongoUrl = "mongodb://127.0.0.1:27017/wanderlust";
+const store = MongoStore.create({
+  mongoUrl: dbUrl,
+  touchAfter: 24 * 3600, // time in seconds
+  crypto: {
+    secret: process.env.SECRET,
+  },
+});
+
+store.on("error", (e) => {
+  console.log("Session store error", e);
+});
+
+const sessionOptions = {
+  store,
+  secret: process.env.SECRET,
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    httpOnly: true,
+  },
+};
+
+app.use(session(sessionOptions));
+app.use(flash());
+
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStrategy(User.authenticate()));
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
+// const MongoUrl = "mongodb://127.0.0.1:27017/wanderlust";
 
 main()
   .then((res) => {
@@ -25,72 +74,37 @@ main()
   .catch((err) => console.log(err));
 
 async function main() {
-  await mongoose.connect(MongoUrl);
+  await mongoose.connect(dbUrl);
 }
 
-app.get("/", (req, res) => {
-  res.send("This is home page");
+app.use((req, res, next) => {
+  res.locals.success = req.flash("success");
+  res.locals.error = req.flash("error");
+  res.locals.currUser = req.user;
+  next();
+});
+app.get("/demouser", async (req, res) => {
+  let fakeUser = new User({
+    email: "student@gmail.com",
+    username: "student",
+  });
+  let registerUser = await User.register(fakeUser, "helloworld");
+  res.send(registerUser);
 });
 
-// index route
-app.get("/listings", async (req, res) => {
-  const allListings = await Listing.find({});
-  res.render("listings/index.ejs", { allListings });
+app.use("/listings", listingsRouter);
+app.use("/listings/:id/reviews", reviewsRouter);
+app.use("/", userRouter);
+
+app.all(/.*/, (req, res, next) => {
+  next(new ExpressError(404, "Page Not Found"));
 });
 
-// new route
-app.get("/listings/new", (req, res) => {
-  res.render("listings/new.ejs");
+app.use((err, req, res, next) => {
+  let { statusCode = 500, message = "Something went wrong" } = err;
+  res.render("listings/error.ejs", { statusCode, message });
 });
 
-// show route
-app.get("/listings/:id", async (req, res) => {
-  let { id } = req.params;
-  const listing = await Listing.findById(id);
-  res.render("listings/show.ejs", { listing });
-});
-
-// create route
-app.post("/listings", async (req, res) => {
-  const newListing = new Listing(req.body.listing);
-  await newListing.save();
-  res.redirect("/listings");
-});
-app.get("/listings/:id/edit", async (req, res) => {
-  const { id } = req.params;
-  const listing = await Listing.findById(id);
-  res.render("listings/edit.ejs", { listing });
-  // res.render("listings/edit.ejs", { listing });
-});
-
-app.put("/listings/:id", async (req, res) => {
-  const { id } = req.params;
-  const updatedListing = await Listing.findByIdAndUpdate(
-    id,
-    { ...req.body.listing },
-    { new: true }
-  );
-  res.redirect(`/listings/${updatedListing._id}`);
-});
-
-app.delete("/listings/:id", async (req, res) => {
-  const { id } = req.params;
-  await Listing.findByIdAndDelete(id);
-  res.redirect("/listings");
-});
-
-// app.get("/testListing", async (req, res) => {
-//   let sampleListing = new Listing({
-//     title: "My new Villa",
-//     description: "By the beach",
-//     price: 1200,
-//     location: "Calangute, Goa",
-//     country: "India",
-//   });
-//   await sampleListing.save();
-//   console.log("Listing saved");
-//   res.send("sucess testing");
-// });
 app.listen(4000, () => {
   console.log("Server started on port 4000");
 });

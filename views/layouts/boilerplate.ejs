@@ -25,10 +25,13 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/CSS/style.css" />
+    <link rel="stylesheet" href="/CSS/ratting.css" />
   </head>
   <body>
     <%- include("../includes/navbar.ejs") %>
-    <div class="container"><%- body -%></div>
+    <div class="container">
+      <%- include("../includes/flash.ejs") %><%- body %>
+    </div>
 
     <%- include("../includes/footer.ejs") %>
     <script

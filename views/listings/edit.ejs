@@ -2,7 +2,7 @@
 
   <body>
    
-    <form action="/listings/<%= listing._id %>?_method=PUT" method="post">
+    <form action="/listings/<%= listing._id %>?_method=PUT" method="POST" class="needs-validation" novalidate enctype="multipart/form-data">
 
     <div class="row">
       
@@ -19,6 +19,7 @@
         class="form-control"
         required
       />
+      <div class="valid-feedback">Title looks good!</div>
     </div>
     <div class="mb-3">
       <label for="description" class="form-label">Description</label>
@@ -31,18 +32,24 @@
         class="form-control"
         required
       />
+      <div class="invalid-feedback">Please enter a short description</div>
     </div>
 
     <div class="mb-3">
-      <label for="image" class="form-label">Image Link</label>
+      Original Listing Image <br>
+      <img src="<%= originalImageUrl %>" alt="Image">
+    </div>
+
+    <div class="mb-3">
+      <label for="image" class="form-label">Upload New Image</label>
       <input
-        type="text"
+        type="file"
         name="listing[image]"
-        placeholder="Image URL"
-         value="<%= listing.image %>"
+        placeholder="Image "
         class="form-control"
-        required
+        
       />
+      <div class="invalid-feedback">Add image</div>
     </div>
 
    <div class="row">
@@ -50,13 +57,14 @@
       <label for="number" class="form-label">Price</label>
 
       <input
-        type="number"
+        
         name="listing[price]"
         placeholder="Price"
          value="<%= listing.price %>"
         class="form-control"
         required
       />
+      <div class="invalid-feedback">Price should be valid</div>
     </div>
 
     <div class="mb-3 col-8">
@@ -69,6 +77,7 @@
         class="form-control"
         required
       />
+       <div class="invalid-feedback">Country name should be valid</div>
     </div>
    </div>
 
@@ -82,11 +91,14 @@
         class="form-control"
         required
       />
+      <div class="invalid-feedback">location should be valid</div>
     </div>
 
     <button class="btn btn-dark editBtn mb-5">Edit</button>
   </form>
   </div>
   </div>
+
+  <script src="js/script.js"></script>
   </body>
 </html>

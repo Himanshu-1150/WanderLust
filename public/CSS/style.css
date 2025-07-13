@@ -45,10 +45,17 @@ body {
   flex-wrap: wrap;
   justify-content: center;
   align-items: space-evenly;
+
+  left: 0;
+  bottom: 0;
+  width: 100%;
+}
+.footer {
+  bottom: 0;
 }
 
 /* Cards */
-.card {
+.card-listing {
   border: none !important;
   margin-bottom: 2rem;
 }
